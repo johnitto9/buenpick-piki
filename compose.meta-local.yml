@@ -1,0 +1,32 @@
+services:
+  piki-api:
+    environment:
+      PIKI_META_APP_SECRET_FILE: /run/secrets/meta_app_secret
+      PIKI_META_ACCESS_TOKEN_FILE: /run/secrets/meta_access_token
+      PIKI_META_WEBHOOK_VERIFY_TOKEN_FILE: /run/secrets/meta_webhook_verify_token
+      PIKI_BUENPICK_INTERNAL_API_TOKEN_FILE: /run/secrets/buenpick_internal_api_token
+      PIKI_META_INGRESS_ENABLED: "false"
+    secrets:
+      - meta_app_secret
+      - meta_access_token
+      - meta_webhook_verify_token
+      - buenpick_internal_api_token
+
+  piki-worker:
+    environment:
+      PIKI_META_ACCESS_TOKEN_FILE: /run/secrets/meta_access_token
+      PIKI_BUENPICK_INTERNAL_API_TOKEN_FILE: /run/secrets/buenpick_internal_api_token
+      PIKI_META_INGRESS_ENABLED: "false"
+    secrets:
+      - meta_access_token
+      - buenpick_internal_api_token
+
+secrets:
+  meta_app_secret:
+    file: ./secrets/meta_app_secret.txt
+  meta_access_token:
+    file: ./secrets/keylongdurationmeta.txt
+  meta_webhook_verify_token:
+    file: ./secrets/meta_webhook_verify_token.txt
+  buenpick_internal_api_token:
+    file: ./secrets/buenpick_internal_api_token.txt

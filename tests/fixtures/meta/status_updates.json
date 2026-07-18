@@ -1,0 +1,54 @@
+{
+  "object": "whatsapp_business_account",
+  "entry": [
+    {
+      "id": "waba-test-1",
+      "changes": [
+        {
+          "field": "messages",
+          "value": {
+            "messaging_product": "whatsapp",
+            "metadata": {
+              "display_phone_number": "5492914000001",
+              "phone_number_id": "phone-number-test-1"
+            },
+            "statuses": [
+              {
+                "id": "wamid.outbound.sent.1",
+                "status": "sent",
+                "timestamp": "1784192500",
+                "recipient_id": "5492914000000"
+              },
+              {
+                "id": "wamid.outbound.delivered.1",
+                "status": "delivered",
+                "timestamp": "1784192501",
+                "recipient_id": "5492914000000"
+              },
+              {
+                "id": "wamid.outbound.read.1",
+                "status": "read",
+                "timestamp": "1784192502",
+                "recipient_id": "5492914000000"
+              },
+              {
+                "id": "wamid.outbound.failed.1",
+                "status": "failed",
+                "timestamp": "1784192503",
+                "recipient_id": "5492914000000",
+                "errors": [
+                  {
+                    "code": 131047,
+                    "title": "Re-engagement message",
+                    "message": "Message failed",
+                    "error_data": {"details": "Fixture delivery rejection"}
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

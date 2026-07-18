@@ -1,0 +1,14 @@
+# Explicit local production-integration override.
+# This enables real BuenPick reads and real Meta inbound/reply processing.
+# Do not use it unless a real test recipient and an operator are ready.
+services:
+  piki-api:
+    environment:
+      PIKI_BUENPICK_ALLOW_PRODUCTION: "true"
+      PIKI_META_INGRESS_ENABLED: "true"
+
+  piki-worker:
+    environment:
+      PIKI_BUENPICK_ALLOW_PRODUCTION: "true"
+      PIKI_CONVERSATION_ENABLED: "true"
+      PIKI_CONVERSATION_WORKER_ENABLED: "true"

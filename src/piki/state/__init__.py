@@ -1,0 +1,1 @@
+"""Ephemeral, conversation-scoped state."""

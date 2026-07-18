@@ -1,0 +1,26 @@
+TAREA
+{{ packet.task | json_string }}
+
+CONSULTA
+{{ packet.query | json_string }}
+
+DATOS CONFIRMADOS
+{% for item in packet.confirmed_data %}- {{ item.label | json_string }}: {{ item.value | json_string }} (fuente={{ item.source.value | json_string }}{% if item.source_reference %}, referencia={{ item.source_reference | json_string }}{% endif %})
+{% else %}- Ninguno.
+{% endfor %}
+DATOS NO DISPONIBLES
+{% for item in packet.unavailable_data %}- {{ item | json_string }}
+{% else %}- Ninguno.
+{% endfor %}
+ACCIONES REALIZADAS
+{% for action in packet.actions_performed %}- {{ action.name | json_string }}: {{ action.outcome | json_string }}{{ (" (referencia=" ~ (action.reference | json_string) ~ ")") if action.reference else "" }}
+{% else %}- Ninguna.
+{% endfor %}
+REGLAS DE REDACCIÓN
+{% for rule in packet.writing_rules %}- {{ rule | json_string }}
+{% else %}- Aplicar únicamente el system prompt.
+{% endfor %}
+CONTROL
+- modo={{ packet.response_mode.value | json_string }}
+- active_pick_id={{ (packet.active_pick_id | json_string) if packet.active_pick_id else "null" }}
+- trace_id={{ packet.trace_id | json_string }}

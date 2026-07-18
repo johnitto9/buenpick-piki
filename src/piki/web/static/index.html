@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#f5f6f1">
+    <title>Piki | BuenPick</title>
+    <link rel="stylesheet" href="/console/assets/app.css">
+  </head>
+  <body>
+    <main class="workspace">
+      <header class="topbar">
+        <div class="brand" aria-label="Piki, BuenPick">
+          <span class="brand-mark" aria-hidden="true">P</span>
+          <div>
+            <strong>Piki</strong>
+            <span>BuenPick</span>
+          </div>
+        </div>
+        <div class="runtime" id="runtime">
+          <span class="status-dot" aria-hidden="true"></span>
+          <span id="runtime-label">Conectando</span>
+        </div>
+      </header>
+
+      <section class="chat-shell" aria-label="Chat con Piki">
+        <div class="chat-heading">
+          <div>
+            <p class="eyebrow">Asistente de rescate</p>
+            <h1>Conversación local</h1>
+          </div>
+          <button class="icon-button" id="new-chat" type="button" title="Nueva conversación" aria-label="Nueva conversación">↻</button>
+        </div>
+
+        <div class="messages" id="messages" aria-live="polite">
+          <article class="message assistant">
+            <span class="avatar" aria-hidden="true">P</span>
+            <div class="bubble">Hola, soy Piki. ¿Qué alimento te gustaría rescatar hoy?</div>
+          </article>
+        </div>
+
+        <form class="composer" id="chat-form">
+          <label class="sr-only" for="message-input">Mensaje</label>
+          <textarea id="message-input" maxlength="4096" rows="1" placeholder="Escribile a Piki" required></textarea>
+          <button class="send-button" type="submit" title="Enviar mensaje" aria-label="Enviar mensaje">→</button>
+        </form>
+      </section>
+    </main>
+    <script src="/console/assets/app.js" defer></script>
+  </body>
+</html>

@@ -1,0 +1,26 @@
+services:
+  piki-api:
+    environment:
+      PIKI_CONVERSATION_ENABLED: "true"
+      PIKI_LOCAL_CONSOLE_ENABLED: "true"
+      PIKI_LLM_PROVIDER: nvidia_nim
+      PIKI_LLM_MODEL: z-ai/glm-5.2
+      PIKI_LLM_API_KEY_FILE: /run/secrets/nvidia_nim_api_key
+      PIKI_LLM_BASE_URL: https://integrate.api.nvidia.com/v1
+    secrets:
+      - nvidia_nim_api_key
+
+  piki-worker:
+    environment:
+      PIKI_CONVERSATION_ENABLED: "true"
+      PIKI_CONVERSATION_WORKER_ENABLED: "false"
+      PIKI_LLM_PROVIDER: nvidia_nim
+      PIKI_LLM_MODEL: z-ai/glm-5.2
+      PIKI_LLM_API_KEY_FILE: /run/secrets/nvidia_nim_api_key
+      PIKI_LLM_BASE_URL: https://integrate.api.nvidia.com/v1
+    secrets:
+      - nvidia_nim_api_key
+
+secrets:
+  nvidia_nim_api_key:
+    file: ./secrets/nvidia_nim_api_key.txt

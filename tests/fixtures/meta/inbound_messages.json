@@ -1,0 +1,67 @@
+{
+  "object": "whatsapp_business_account",
+  "entry": [
+    {
+      "id": "waba-test-1",
+      "changes": [
+        {
+          "field": "messages",
+          "value": {
+            "messaging_product": "whatsapp",
+            "metadata": {
+              "display_phone_number": "5492914000001",
+              "phone_number_id": "phone-number-test-1"
+            },
+            "contacts": [
+              {
+                "profile": {"name": "Persona de prueba"},
+                "wa_id": "5492914000000"
+              }
+            ],
+            "messages": [
+              {
+                "from": "5492914000000",
+                "id": "wamid.test.text.1",
+                "timestamp": "1784192400",
+                "type": "text",
+                "text": {"body": "Hola Piki, ¿qué puedo rescatar hoy?"}
+              },
+              {
+                "from": "5492914000000",
+                "id": "wamid.test.image.1",
+                "timestamp": "1784192401",
+                "type": "image",
+                "image": {
+                  "id": "media-test-1",
+                  "mime_type": "image/jpeg",
+                  "sha256": "fixture-digest",
+                  "caption": "¿Es este pick?"
+                }
+              },
+              {
+                "from": "5492914000000",
+                "id": "wamid.test.interactive.1",
+                "timestamp": "1784192402",
+                "type": "interactive",
+                "interactive": {
+                  "type": "button_reply",
+                  "button_reply": {
+                    "id": "view-pick-test-1",
+                    "title": "Ver este pick"
+                  }
+                }
+              },
+              {
+                "from": "5492914000000",
+                "id": "wamid.test.unsupported.1",
+                "timestamp": "1784192403",
+                "type": "location",
+                "location": {"latitude": -38.7, "longitude": -62.2}
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}
