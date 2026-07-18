@@ -1,134 +1,134 @@
 # Piki
 
-### El asistente oficial de BuenPick para rescatar alimentos, con evidencia antes que lenguaje.
+### BuenPick's official conversational assistant for food rescue, built on confirmed evidence.
 
-Piki es el sistema conversacional de BuenPick. Ayuda a las personas a encontrar oportunidades de
-rescate de alimentos en comercios activos, entender una compra, consultar un pedido propio y pedir
-atención humana. Su regla más importante es también su frontera de seguridad:
+Piki is BuenPick's conversational system for helping people discover surplus-food rescue
+opportunities from active businesses, understand their purchase, check an owned order, and request
+human attention. Its core safety rule is also its architectural boundary:
 
-> Primero representa la realidad confirmada. Después permite que el modelo la transforme en lenguaje.
+> Build a trustworthy representation of reality first. Let the model turn that representation into language second.
 
-Piki no duplica la lógica comercial de BuenPick. No scrapea, no accede a la base de datos de BuenPick,
-no usa bridges no oficiales de WhatsApp y no permite que n8n decida hechos comerciales.
+Piki does not duplicate BuenPick's commercial rules. It does not scrape, access BuenPick's database,
+use unofficial WhatsApp bridges, or let n8n decide commercial facts.
 
-## Qué resuelve
+## What Piki provides
 
-- Conversaciones por WhatsApp Cloud API oficial de Meta y una consola local de desarrollo.
-- Memoria conversacional durable y estado efímero aislado por canal, cuenta y conversación.
-- Búsqueda tipada de picks, comercios, imágenes y pedidos a través de BuenPick Internal API.
-- Evidencia estructurada con Jinja, policies explícitas y grounding validator.
-- GLM-5.2 mediante NVIDIA NIM detrás de un puerto LLM intercambiable.
-- Delivery idempotente con estados reales: `accepted`, `sent`, `delivered`, `read` y `failed`.
-- Handoff humano durable y base para la futura consola operativa/Kanban.
-- Docker Compose local y stack compatible con Dokploy/Swarm.
+- Official Meta WhatsApp Cloud API integration and a local development chat console.
+- Durable conversational memory and ephemeral state isolated by channel, account, and conversation.
+- Typed search for picks, commerce details, images, and owned orders through BuenPick Internal API.
+- Structured evidence assembled with Jinja, explicit policies, and a blocking grounding validator.
+- GLM-5.2 through NVIDIA NIM behind a provider-neutral LLM port.
+- Idempotent delivery with real provider states: `accepted`, `sent`, `delivered`, `read`, and `failed`.
+- Durable human handoff and the foundation for an authenticated operator/Kanban surface.
+- Docker Compose development and a Dokploy/Swarm-compatible production path.
 
-## Arquitectura de extremo a extremo
+## End-to-end architecture
 
 ```text
-WhatsApp Cloud API (Meta)
-        │ webhook firmado, normalizado y deduplicado
+Meta WhatsApp Cloud API
+        │ signed, normalized, deduplicated webhook
         ▼
-PostgreSQL: inbound durable + processing outbox
-        │ claim FOR UPDATE SKIP LOCKED
+PostgreSQL: durable inbound message + processing outbox
+        │ FOR UPDATE SKIP LOCKED claim
         ▼
 Redis: locks, replay hints, active pick, TTL state
         ▼
 Intent / policy / typed tools
         │
-        ├── BuenPick Internal API (única verdad operacional)
-        │       picks, stock, precios, comercios, pedidos
+        ├── BuenPick Internal API (operational source of truth)
+        │       picks, stock, prices, commerce, orders
         │
         ▼
-Evidence mapper → ContextPacket → Jinja inteligente
+Evidence mapper → ContextPacket → intelligent Jinja template
         ▼
-System prompt + reglas + conversación → GLM-5.2/NIM
+System prompt + rules + conversation → GLM-5.2/NIM
         ▼
 Grounding validator
-        │  bloquea claims sin evidencia, fugas internas y datos riesgosos
+        │ blocks unsupported claims, internal leaks, and unsafe delivery wording
         ▼
 PostgreSQL outbound + IdempotentDeliveryService
         ▼
 Meta /messages → accepted
         ▼
-Callbacks Meta → sent → delivered → read / failed
+Meta callbacks → sent → delivered → read / failed
 ```
 
-La aceptación HTTP de Meta no significa entrega. Piki solo registra `delivery_succeeded` después de
-persistir un callback `delivered`.
+Meta HTTP acceptance is not delivery. Piki emits `delivery_succeeded` only after a durable
+`delivered` callback has been committed.
 
-## Componentes
+## Components
 
-| Componente | Responsabilidad | Fuente de verdad |
+| Component | Responsibility | Source of truth |
 |---|---|---|
-| `piki-api` | Healthchecks, webhook Meta, API de chat local y entrada durable | PostgreSQL/Redis |
-| `piki-worker` | Reclamo del outbox, composición y delivery oficial | PostgreSQL + Meta |
-| PostgreSQL 16 + pgvector | Conversaciones, mensajes, handoffs, delivery, migraciones y futura búsqueda semántica | Datos durables |
-| Redis 7 | Locks, deduplicación rápida, TTL, active pick y coordinación | Estado efímero |
-| BuenPick Internal API | Picks, precios, disponibilidad, comercios y pedidos | Verdad operacional externa |
-| Jinja | Convierte datos tipados en evidencia legible | No contiene catálogo mutable |
-| NVIDIA NIM / GLM-5.2 | Redacción conversacional controlada | Nunca inventa hechos |
-| Meta WhatsApp Cloud API | Transporte oficial de inbound/outbound | Estado final de entrega |
-| n8n | Futuros avisos y automatizaciones operativas | No razona ni responde chats |
+| `piki-api` | Readiness, Meta webhook, local chat API, durable ingress | PostgreSQL / Redis |
+| `piki-worker` | Outbox claims, composition, official delivery | PostgreSQL + Meta |
+| PostgreSQL 16 + pgvector | Conversations, messages, handoffs, delivery, migrations, future semantic indexes | Durable state |
+| Redis 7 | Locks, fast deduplication, TTLs, active pick, coordination | Ephemeral state |
+| BuenPick Internal API | Picks, prices, availability, commerce, orders | External operational truth |
+| Jinja | Converts typed data into evidence | No mutable catalog |
+| NVIDIA NIM / GLM-5.2 | Controlled conversational wording | Never a facts database |
+| Meta WhatsApp Cloud API | Official channel transport | Final provider delivery state |
+| n8n | Future operational event consumer | Never reasoning or chat delivery |
 
-## pgvector y búsqueda semántica
+## pgvector and semantic retrieval
 
-La imagen local usa `pgvector/pgvector:0.8.1-pg16-bookworm` desde el comienzo, pero pgvector no es
-una fuente de stock ni disponibilidad. La Etapa 8 define su uso en tres índices separados:
+The local image uses `pgvector/pgvector:0.8.1-pg16-bookworm` from the beginning, but pgvector is
+never a source of truth for stock or availability. Stage 8 defines three separated semantic indexes:
 
-- catálogo y candidatos semánticos;
-- conocimiento estable de BuenPick/Piki;
-- memoria conversacional acotada.
+- catalog and candidate retrieval;
+- stable BuenPick/Piki knowledge;
+- bounded conversational memory.
 
-La regla es:
+The invariant is:
 
 ```text
-pgvector encuentra candidatos
-BuenPick reconfirma la realidad actual
-Piki responde solo con la evidencia reconfirmada
+pgvector finds candidates
+BuenPick reconfirms current reality
+Piki answers only from reconfirmed evidence
 ```
 
-La sincronización, embeddings reales, métricas de relevancia/latencia y rollback por feature flag
-son el siguiente bloque de trabajo. Un embedding nunca puede convertir un pick vencido o agotado en
-una respuesta disponible.
+Real embeddings, synchronization, relevance/latency metrics, feature flags, and rollback are the
+next implementation stage. An embedding must never turn an expired or sold-out pick into an available
+answer.
 
 ## BuenPick Internal API
 
-Piki usa Bearer auth y un cliente tipado con timeouts, retries acotados, mapeo de errores y logs
-redactados. Las operaciones permitidas son:
+Piki uses Bearer authentication through a typed client with bounded timeouts, safe retries, typed
+error mapping, and redacted logs. The supported operational surface is:
 
-- `GET /picks/search` para resultados actuales;
-- `GET /picks/{pick_id}` para reconfirmar un pick;
-- `GET /commerces/{commerce_id}` para datos seguros del comercio;
-- `GET /orders/{order_id}` únicamente con prueba de ownership;
-- checkout interno deliberadamente deshabilitado.
+- `GET /picks/search` for current results;
+- `GET /picks/{pick_id}` to reconfirm a pick;
+- `GET /commerces/{commerce_id}` for customer-safe commerce data;
+- `GET /orders/{order_id}` only with ownership proof;
+- checkout deliberately disabled while the upstream contract keeps it disabled.
 
-Una búsqueda vacía (`items: []`) es una respuesta válida, no un error. Piki no completa precios,
-stock, horarios ni contenidos de bolsas sorpresa con conocimiento del modelo.
+An empty search (`items: []`) is a valid result, not an error. Piki never fills in prices, stock,
+hours, or surprise-bag contents from model knowledge.
 
-## LLM, Jinja y grounding
+## LLM, Jinja, and grounding
 
-El modelo no recibe objetos arbitrarios ni acceso a tools. El pipeline construye un `ContextPacket`
-tipado con:
+The model never receives arbitrary provider objects or direct tool access. The pipeline builds a
+typed `ContextPacket` with:
 
 ```text
-TAREA
-CONSULTA
-DATOS CONFIRMADOS
-DATOS NO DISPONIBLES
-ACCIONES REALIZADAS
-REGLAS DE REDACCIÓN
+TASK
+QUERY
+CONFIRMED DATA
+UNAVAILABLE DATA
+ACTIONS PERFORMED
+WRITING RULES
 ```
 
-Jinja es un transformador de evidencia, no una base de conocimiento ni una respuesta hardcodeada.
-El grounding bloquea lenguaje comercial no sustentado, referencias internas, instrucciones de prompt
-injection y falsos estados de delivery. Si el proveedor falla, Piki usa un fallback factual o una
-respuesta segura; nunca simula éxito.
+Jinja transforms evidence; it is not a knowledge base or a hardcoded response library. Grounding
+blocks unsupported commercial language, internal references, prompt-injection instructions, and
+false delivery claims. Provider failures produce a factual fallback or a safe refusal; Piki never
+simulates success.
 
-## Docker local
+## Docker development
 
-### Perfil seguro de desarrollo
+### Safe local profile
 
-Este es el perfil recomendado para trabajar sin tráfico productivo:
+Use this profile for development without productive WhatsApp traffic:
 
 ```bash
 docker compose \
@@ -138,7 +138,7 @@ docker compose \
   up -d --build --wait
 ```
 
-Servicios y URLs:
+Local endpoints:
 
 ```text
 Piki console: http://localhost:8000/console
@@ -146,15 +146,15 @@ Readiness:     http://localhost:8000/health/ready
 n8n:           http://localhost:5678
 ```
 
-Este perfil deja Meta ingress y el worker de WhatsApp apagados. La consola permite probar saludo,
-explicación de BuenPick, historial y handoff. El acceso productivo a BuenPick se protege con
-`PIKI_BUENPICK_ALLOW_PRODUCTION=false`.
+This profile keeps Meta ingress and the WhatsApp worker disabled. The console supports greetings,
+BuenPick explanations, durable history, and human handoff. Productive BuenPick access is protected
+by `PIKI_BUENPICK_ALLOW_PRODUCTION=false`.
 
-### Perfil productivo local, solo autorizado
+### Explicit local production profile
 
-`compose.prod-local.yml` activa consultas reales a BuenPick, ingress Meta y el worker de respuestas.
-Usalo únicamente con un destinatario de prueba autorizado y un callback HTTPS público que enrute a
-este equipo:
+`compose.prod-local.yml` enables real BuenPick reads, Meta ingress, and the conversation worker. Use
+it only for an authorized test recipient and only when an HTTPS callback publicly routes to this
+machine:
 
 ```bash
 docker compose \
@@ -165,16 +165,16 @@ docker compose \
   up -d --build --wait
 ```
 
-Meta no puede alcanzar `localhost` directamente. Antes de enviar un WhatsApp real hay que configurar
-el challenge, el verify token y la suscripción WABA al campo `messages`.
+Meta cannot reach `localhost` directly. Before sending a real WhatsApp message, configure the public
+callback, complete the verify challenge, and subscribe the WABA to the `messages` field.
 
-Para volver al perfil seguro, levantá nuevamente solo los tres primeros archivos. Nunca uses
-`docker compose down -v`: los volúmenes contienen PostgreSQL y el estado cifrado de n8n.
+To return to the safe profile, bring the stack up again using only the first three Compose files.
+Never use `docker compose down -v`: volumes contain PostgreSQL data and n8n's encrypted state.
 
-## Variables y secretos
+## Configuration and secrets
 
-`.env.example` es una plantilla. `.env` es local e ignorado. En producción se prefieren secretos
-Docker/Dokploy/Swarm mediante variantes `*_FILE`:
+`.env.example` is a template. `.env` is local and ignored. Production uses Docker/Dokploy/Swarm
+secrets through `*_FILE` settings whenever possible:
 
 ```text
 PIKI_META_APP_SECRET_FILE
@@ -184,33 +184,32 @@ PIKI_LLM_API_KEY_FILE
 PIKI_BUENPICK_INTERNAL_API_TOKEN_FILE
 ```
 
-Nunca se versionan `secrets/`, tokens, App Secret, claves NVIDIA, claves privadas, dumps, logs ni
-credenciales de n8n. El `.dockerignore` usa una allowlist de build para que los secretos locales no
-entren en la imagen. Más detalles: [SECURITY.md](SECURITY.md).
+Never version `secrets/`, `.env`, access tokens, Meta App Secret, webhook verify tokens, private keys,
+database dumps, logs, or n8n credentials. `.dockerignore` is an image-build allowlist, so local
+secrets are excluded from the build context. See [SECURITY.md](SECURITY.md).
 
-## n8n
+## n8n boundaries
 
-n8n es un consumidor de eventos, no parte del razonamiento conversacional. Sus futuros workflows
-permitidos son:
+n8n is an event consumer, not part of conversational reasoning. Its allowed future workflows are:
 
-1. Aviso cuando una conversación pasa a `needs_human`.
-2. Notificación operativa de cambios de orden.
-3. Resumen diario.
+1. Notify an internal channel when a conversation enters `needs_human`.
+2. Send operational order-status notifications.
+3. Produce a daily operations summary.
 
-n8n no llama a Meta, no consulta PostgreSQL/BuenPick, no decide disponibilidad y no responde al
-cliente. El entorno local actual tiene administrador creado y cero workflows productivos.
+n8n must not call Meta, query PostgreSQL/BuenPick, decide availability, or answer customers. The
+current local instance has an administrator and zero productive workflows.
 
-## Observabilidad y entrega
+## Observability and delivery truth
 
-Los eventos estructurados están allowlisteados y correlacionados por `trace_id`. Registran etapa,
-resultado, latencia, error sanitizado y conteos de evidencia, pero no mensajes completos, tokens,
-teléfonos, payloads crudos ni datos comerciales innecesarios.
+Structured lifecycle events are allowlisted and correlated by `trace_id`. They include stage,
+outcome, latency, sanitized error codes, and evidence counts, but not full messages, tokens, phone
+numbers, raw provider payloads, or unnecessary commercial data.
 
-La entrega se persiste por idempotency key. Los replays de Meta no crean conversaciones ni mensajes
-duplicados. Los callbacks avanzan monotónicamente y los retrocesos quedan auditados sin corromper el
-estado actual.
+Delivery is persisted by idempotency key. Meta retries cannot create duplicate conversations or
+messages. Provider callbacks advance monotonically; late regressions remain audited without
+corrupting the latest known state.
 
-## Tests y gates
+## Tests and gates
 
 ```bash
 .venv/bin/ruff check .
@@ -221,18 +220,19 @@ DOCKER_BIN="/mnt/c/Program Files/Docker/Docker/resources/bin/docker.exe" \
   ./scripts/smoke-stage2.sh
 ```
 
-La cobertura incluye contratos Meta/BuenPick/LLM, webhooks firmados, delivery, fallos, deduplicación,
-golden conversations, prompt injection, handoff, aislamiento, persistencia, migraciones y tests de
-seguridad. Los tests no llaman producción.
+Coverage includes BuenPick/Meta/LLM contracts, signed webhooks, delivery, failures, deduplication,
+golden conversations, prompt injection, handoff, isolation, persistence, migrations, and security
+tests. Test suites never call production.
 
 ## Roadmap
 
-- **Etapas 1–7:** arqueología, contratos, tools, memoria, Jinja/LLM, Meta oficial, goldens y
-  observabilidad: implementadas y verificadas.
-- **Etapa 8:** embeddings reales, pgvector, sincronización y reconfirmación: siguiente etapa activa.
-- **Etapa 9:** n8n mínimo, consola Kanban autenticada, eventos firmados y despliegue público:
-  pendiente.
+- **Stages 1–7:** archaeology, contracts, tools, memory, Jinja/LLM, official Meta, goldens, and
+  observability: implemented and verified.
+- **Stage 8:** real embeddings, pgvector synchronization, and mandatory reconfirmation: next active
+  stage.
+- **Stage 9:** minimal n8n, authenticated operator Kanban, signed event contracts, and public
+  deployment: pending.
 
-El estado verificable está en [PIKI_STATUS.md](PIKI_STATUS.md) y la bitácora reproducible en
-[PIKI_EVIDENCE.md](PIKI_EVIDENCE.md). Para operación, empezar por
+Current status is tracked in [PIKI_STATUS.md](PIKI_STATUS.md), reproducible evidence in
+[PIKI_EVIDENCE.md](PIKI_EVIDENCE.md), and owner operations in
 [GUIA_PENDIENTES_DUENO.md](GUIA_PENDIENTES_DUENO.md).
